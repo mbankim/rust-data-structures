@@ -1,0 +1,6 @@
+[package]
+name = "data-structures"
+version = "0.1.0"
+authors = ["mbankim <matthewbankim2@gmail.com>"]
+
+[dependencies]
