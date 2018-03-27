@@ -1,1 +1,1 @@
-# rust-data-structures
+# rust_data_structures
