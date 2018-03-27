@@ -56,36 +56,39 @@ fn insert_node(bst: &mut Tree, node: Box<Node>) {
     }
 }
 
+fn pop_leftmost(tree: &mut Tree) -> Tree {
+    return match *tree {
+        Some(ref mut node) => pop_leftmost(&mut node.left),
+        None => None,
+    }.or_else(|| tree.take())
+}
+
 fn remove_node(bst: &mut Tree, val: i32) {
-    match *bst {
-        Some(ref mut tree) => {
-            match val.cmp(&tree.val) {
-                Ordering::Less => {
-                    remove_node(&mut tree.left, val);
-                    return
-                }
-                Ordering::Greater => {
-                    remove_node(&mut tree.right, val);
-                    return
-                }
-                Ordering::Equal => (),
+    let node_to_promote = match *bst {
+        Some(ref mut node) => {
+            match val.cmp(&node.val) {
+                Ordering::Less => return remove_node(&mut node.left, val),
+                Ordering::Greater => return remove_node(&mut node.right, val),
+                Ordering::Equal => {
+                    if node.right.is_some() {
+                        let mut leftmost = pop_leftmost(&mut node.right);
+                        if let Some(ref mut leftmost_node) = leftmost {
+                            leftmost_node.right = node.right.take();
+                        }
+                        leftmost
+                    } else { node.left.take() }
+                },
             }
         },
         None => return,
-    }
-
-    let mut node = bst.take().unwrap();
-    if let Some(right) = node.right.take() {
-        insert_node(&mut node.left, right);
-    }
-    mem::replace(bst, node.left);
+    };
+    mem::replace(bst, node_to_promote);
 }
 
 
 fn dfs(bst: &Tree, result: &mut Vec<i32>) {
     match *bst {
         Some(ref tree) => {
-            println!("visiting node with value {}", tree.val);
             dfs(&tree.left, result);
             result.push(tree.val);
             dfs(&tree.right, result);
@@ -96,14 +99,13 @@ fn dfs(bst: &Tree, result: &mut Vec<i32>) {
 
 #[cfg(test)]
 mod tests {
-    use super::BST;
+    use super::{BST, pop_leftmost};
     #[test]
     fn test_insert() {
         let mut bst = BST::new();
         bst.insert(3);
         bst.insert(5);
         bst.insert(1);
-
         assert_eq!(bst.inc_order(), vec![1, 3, 5])
     }
 
@@ -116,11 +118,23 @@ mod tests {
         bst.insert(9);
         bst.insert(6);
         assert_eq!(bst.inc_order(), vec![3, 6, 7, 9, 10]);
-
-        bst.remove(3);
         bst.remove(9);
+        assert_eq!(bst.inc_order(), vec![3, 6, 7, 10]);
+        bst.remove(3);
         assert_eq!(bst.inc_order(), vec![6, 7, 10]);
         bst.remove(10);
         assert_eq!(bst.inc_order(), vec![6, 7]);
+    }
+
+    #[test]
+    fn test_pop_leftmost() {
+        let mut bst = BST::new();
+        bst.insert(5);
+        bst.insert(4);
+        bst.insert(3);
+        bst.insert(2);
+        bst.insert(1);
+        assert_eq!(pop_leftmost(&mut bst.root).unwrap().val, 1);
+        assert_eq!(pop_leftmost(&mut bst.root).unwrap().val, 2);
     }
 }
